@@ -1,11 +1,9 @@
 import * as THREE from "three"
-
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js"
 
 let camera, scene, renderer, controls
 
 const objects = []
-
 let raycaster
 
 let moveForward = false
@@ -17,8 +15,6 @@ let canJump = false
 let prevTime = performance.now()
 const velocity = new THREE.Vector3()
 const direction = new THREE.Vector3()
-const vertex = new THREE.Vector3()
-const color = new THREE.Color()
 
 init()
 
@@ -35,10 +31,12 @@ function init() {
   scene.background = new THREE.Color(0xffffff)
   scene.fog = new THREE.Fog(0xffffff, 0, 750)
 
+  // Luz
   const light = new THREE.HemisphereLight(0xeeeeff, 0x777788, 2.5)
   light.position.set(0.5, 1, 0.75)
   scene.add(light)
 
+  // Controles
   controls = new PointerLockControls(camera, document.body)
 
   const blocker = document.getElementById("blocker")
@@ -58,30 +56,27 @@ function init() {
     instructions.style.display = ""
   })
 
-  scene.add(controls.object)
+  scene.add(controls.getObject())
 
+  // Eventos de teclado
   const onKeyDown = function (event) {
     switch (event.code) {
       case "ArrowUp":
       case "KeyW":
         moveForward = true
         break
-
       case "ArrowLeft":
       case "KeyA":
         moveLeft = true
         break
-
       case "ArrowDown":
       case "KeyS":
         moveBackward = true
         break
-
       case "ArrowRight":
       case "KeyD":
         moveRight = true
         break
-
       case "Space":
         if (canJump === true) velocity.y += 350
         canJump = false
@@ -95,17 +90,14 @@ function init() {
       case "KeyW":
         moveForward = false
         break
-
       case "ArrowLeft":
       case "KeyA":
         moveLeft = false
         break
-
       case "ArrowDown":
       case "KeyS":
         moveBackward = false
         break
-
       case "ArrowRight":
       case "KeyD":
         moveRight = false
@@ -123,113 +115,43 @@ function init() {
     10
   )
 
-  // floor
-
-  let floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100)
+  // Piso liso
+  const floorGeometry = new THREE.PlaneGeometry(2000, 2000)
   floorGeometry.rotateX(-Math.PI / 2)
-
-  // vertex displacement
-
-  let position = floorGeometry.attributes.position
-
-  for (let i = 0, l = position.count; i < l; i++) {
-    vertex.fromBufferAttribute(position, i)
-
-    vertex.x += Math.random() * 20 - 10
-    vertex.y += Math.random() * 2
-    vertex.z += Math.random() * 20 - 10
-
-    position.setXYZ(i, vertex.x, vertex.y, vertex.z)
-  }
-
-  floorGeometry = floorGeometry.toNonIndexed() // ensure each face has unique vertices
-
-  position = floorGeometry.attributes.position
-  const colorsFloor = []
-
-  for (let i = 0, l = position.count; i < l; i++) {
-    color.setHSL(
-      Math.random() * 0.3 + 0.5,
-      0.75,
-      Math.random() * 0.25 + 0.75,
-      THREE.SRGBColorSpace
-    )
-    colorsFloor.push(color.r, color.g, color.b)
-  }
-
-  floorGeometry.setAttribute(
-    "color",
-    new THREE.Float32BufferAttribute(colorsFloor, 3)
-  )
-
-  const floorMaterial = new THREE.MeshBasicMaterial({
-    vertexColors: true,
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    roughness: 0.8,
+    metalness: 0.2,
   })
-
   const floor = new THREE.Mesh(floorGeometry, floorMaterial)
   scene.add(floor)
 
-  // objects
+  // Un solo cubo
+  const cubeGeometry = new THREE.BoxGeometry(20, 20, 20)
+  const cubeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4477ff,
+    roughness: 0.3,
+    metalness: 0.7,
+  })
+  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial)
+  cube.position.set(0, 10, -50)
+  scene.add(cube)
+  objects.push(cube)
 
-  const boxGeometry = new THREE.BoxGeometry(20, 20, 20).toNonIndexed()
-
-  position = boxGeometry.attributes.position
-  const colorsBox = []
-
-  for (let i = 0, l = position.count; i < l; i++) {
-    color.setHSL(
-      Math.random() * 0.3 + 0.5,
-      0.75,
-      Math.random() * 0.25 + 0.75,
-      THREE.SRGBColorSpace
-    )
-    colorsBox.push(color.r, color.g, color.b)
-  }
-
-  boxGeometry.setAttribute(
-    "color",
-    new THREE.Float32BufferAttribute(colorsBox, 3)
-  )
-
-  for (let i = 0; i < 500; i++) {
-    const boxMaterial = new THREE.MeshPhongMaterial({
-      specular: 0xffffff,
-      flatShading: true,
-      vertexColors: true,
-    })
-    boxMaterial.color.setHSL(
-      Math.random() * 0.2 + 0.5,
-      0.75,
-      Math.random() * 0.25 + 0.75,
-      THREE.SRGBColorSpace
-    )
-
-    const box = new THREE.Mesh(boxGeometry, boxMaterial)
-    box.position.x = Math.floor(Math.random() * 20 - 10) * 20
-    box.position.y = Math.floor(Math.random() * 20) * 20 + 10
-    box.position.z = Math.floor(Math.random() * 20 - 10) * 20
-
-    scene.add(box)
-    objects.push(box)
-  }
-
-  //
-
+  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setPixelRatio(window.devicePixelRatio)
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setAnimationLoop(animate)
   document.body.appendChild(renderer.domElement)
 
-  //
-
+  // Evento de redimensionamiento
   window.addEventListener("resize", onWindowResize)
 }
 
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
-
   renderer.setSize(window.innerWidth, window.innerHeight)
 }
 
@@ -237,23 +159,20 @@ function animate() {
   const time = performance.now()
 
   if (controls.isLocked === true) {
-    raycaster.ray.origin.copy(controls.object.position)
+    raycaster.ray.origin.copy(controls.getObject().position)
     raycaster.ray.origin.y -= 10
 
     const intersections = raycaster.intersectObjects(objects, false)
-
     const onObject = intersections.length > 0
-
     const delta = (time - prevTime) / 1000
 
     velocity.x -= velocity.x * 10.0 * delta
     velocity.z -= velocity.z * 10.0 * delta
-
-    velocity.y -= 9.8 * 100.0 * delta // 100.0 = mass
+    velocity.y -= 9.8 * 100.0 * delta // Gravedad
 
     direction.z = Number(moveForward) - Number(moveBackward)
     direction.x = Number(moveRight) - Number(moveLeft)
-    direction.normalize() // this ensures consistent movements in all directions
+    direction.normalize()
 
     if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta
     if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta
@@ -265,18 +184,15 @@ function animate() {
 
     controls.moveRight(-velocity.x * delta)
     controls.moveForward(-velocity.z * delta)
+    controls.getObject().position.y += velocity.y * delta
 
-    controls.object.position.y += velocity.y * delta // new behavior
-
-    if (controls.object.position.y < 10) {
+    if (controls.getObject().position.y < 10) {
       velocity.y = 0
-      controls.object.position.y = 10
-
+      controls.getObject().position.y = 10
       canJump = true
     }
   }
 
   prevTime = time
-
   renderer.render(scene, camera)
 }
